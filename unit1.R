@@ -1,8 +1,11 @@
 # SAS: https://odamid-usw2.oda.sas.com/SASStudio/main?locale=en_US&zone=GMT-08%253A00&ticket=ST-209379-K3HYTAFvaS7iHdaJnvLi-cas
 
 # modules ----
-library(Hmisc)
+library(Hmisc) #describe()
 library(readxl)
+library(beeswarm) # unit 7
+library(epitools) # unit 7, riskratio(), oddsratio()
+library(ggplot2)
 
 # datasets ----
 classdata <- read_excel("../../../Downloads/classdata.xlsx")
@@ -45,139 +48,153 @@ for (i in 1:repeats){
 }
 head(samplemean)
 
-# Unit 1 ----
-# module 4 
-mean(c(1, 5, 7, 8, 9))
-median(c(-8, -10, -12, -16, -18, -20, -21, -24, -26, -30, +4, +3, 0, -3, -4, -5, -11, -14, -15, -300))
-IQR(c(+4, +3, 0, -3, -4, -5, -11, -14, -15, -300))
-sd(c(-8, -10, -12, -16, -18, -20, -21, -24, -26, -30))
-IQR(c(-8, -10, -12, -16, -18, -20, -21, -24, -26, -30))
+# Unit 1: simple stats ---------------------------------------------------------
+summary() # boxplot info
+describe() # n missing, distinct, info, mean, gmd
+sd()
+mean()
+median()
+IQR()
+hist(col="", xlim=c(), breaks=)
 # wilcoxon rank sum test
 
-# Unit 1 HW
-x <- c(0,1)
-freq <- c(47,53)
-df1 <- data.frame(x, freq)
-Mean=sum(df1$x*df1$freq)/sum(df1$freq)
+# stats using frequency
 mean(rep(df1$x, df1$freq))
-summary(df1)
-sd = sqrt(sum((df1$x −Mean)**2*df1$freq)/(sum(df1$freq) −1))
 sd(rep(df1$x, df1$freq))
 IQR(rep(df1$x, df1$freq))
 var(rep(df1$x, df1$freq))
 
-summary(df1)
 
-
-
-
-
-
-
-# Unit 2 ------------------------------------------------------------------
+# Unit 2: plotting ------------------------------------------------------------
+plot(x, y, xlab, ylab, pch=16, col="") #type="b", type="l"
+lines(x, y, type="l")
+as.character()
+as.numeric()
+as.numeric(as.character()) # to convert factor to number
 
 # OR to RR
-OR = 5.7
-p = .17
 RR = OR/((1-p) + (p*OR))
 
-RR = R1/R2
 
-# hw
-rate_diff = 34/2.4e6*100000 - 6/1.5e6*100000
-RR = (34/2.4e6*100000) / ( 6/1.5e6*100000)
-rate_diff2 = 34/2.4e6*100000 - 1/1e6*100000
-100000/rate_diff
-data <- read.csv("../../../Downloads/results.csv")
-lines(data$Year, data$Age.Adjusted.Rate)
+# Unit 3: prob sim --------------------------------------------------------
+sample()
+table()
+any()
+sum()
 
+days = sample(365, size=30, replace=TRUE)
+table(days)
+any(table(days)>1)
 
-
-t = pi/4
-x <- c(1,0,0,0,cos(t), -sin(t), 0, sin(t), cos(t))
-y <- c(cos(t), 0, sin(t), 0, 1, 0, -sin(t), 0, cos(t))
-z <- c(cos(t), -sin(t), 0, sin(t), cos(t), 0, 0, 0, 1)
-
-# matrices
-Rx <<- matrix(x, nrow = 3, byrow = T)
-Ry <<- matrix(y, nrow = 3, byrow = T)
-Rz <<- matrix(z, nrow = 3, byrow = T)
-p <<- matrix(c(1,-1,1))
-
-# rotate
-Rx %*% Ry %*% p
-Ry %*% Rx %*% p
-
-y <- c(cos(t), 0, sin(t),0, 0, 1, 0, 0, -sin(t), 0, cos(t),0,0,0,0,1)
-Ry <- matrix(y, nrow = 4, byrow = T)
-p <- matrix(c(3,1,3,1))
 
 matches = 0
 for (i in 1:10000) {
-  dice = sample(365, size=100, replace=TRUE)
-  matches[i] = any(table(dice) >= 4)
+  days = sample(365, size=274, replace=TRUE)
+  matches[i] = any(table(days) > 1)
 }
-  
 sum(matches)/10000
 
 
-x <- c(0, 1, 2, 3, 4, 5)
-px <- c(0, .2, .3, .3, .1, .1)
 
-mean = sum(x*px)
-var = 0
+# Unit 4: prob distr ------------------------------------------------------
+dbinom() # d...() probability density function
+pbinom() # p...() cumulative distribution function (CDF)
+         # q...() quantile function (the inverse of the CDF)
+set.seed()
+rbinom() # r...() gives random numbers from the distribution (use set.seed(n) first in this case)
+hist()
+mean()
+sd()
+sum()
 
-for (i in 1:length(px)) {
-  var = var + (x[i] - mean) ^ 2 * px[i]
-  
+dbinom(60,100,0.5)
+1 - pbinom(59, 100, 0.5)
+pbinom(59, 100, 0.5, lower.tail=FALSE)
+
+# simulates results of 30,000 experiments with 100 virtual coin flips.
+set.seed(1)
+NumHeads = rbinom(30000, 100, 0.5)   
+hist(NumHeads, breaks=seq(25,75,by=1), col="red", xlab="Number of Heads (per 100 Coin Tosses)")
+
+# Normal Distribution
+# P(X≤Z) = pnorm(Z)
+# Z = (area) = qnorm(area) # Z value that corresponds to a given area of a standard normal (probit function):
+# To generate n random numbers (μ=0, σ=1), rnorm(n)
+
+# Exponential
+# P(X=k) = dexp(k,)
+# P(X≤k) = pexp(k,)
+# To generate n random numbers, rexp(n)
+
+# Uniform
+# P(X=k) = dunif(k)
+# P(X≤k) = punif(k)
+# To generate n random numbers, runif(n)
+
+# Binomial
+# P(X=k) = dbinom(k,N,p)
+# P(X≤k) = pbinom(k,N,p)
+# To generate n random numbers  rbinom(k,N,p)
+
+# Poisson
+# P(X=k) = dpois(k,)
+# P(X≤k) = ppois(k,)
+
+
+# Unit 5: statistical inference -------------------------------------------
+rnorm()
+qt(p, df) # p = vector of probs
+mean()
+sd()
+hist()
+
+# Set the parameters of the simulation
+repeats = 10000
+n = 10
+
+# Generate 10,000 samples of 10 
+# population: µ = 65in & σ = 5in
+# For each sample, calculate the µ and σ of height in sample
+samplemean = 0
+samplesd = 0
+for (i in 1:repeats) {
+  heights = rnorm(n,65,5)
+  samplemean[i] = mean(heights)
+  samplesd[i] = sd(heights)
 }
-var
-std = sqrt(var)
 
+# Explore the distribution of the sample means
+hist(samplemean, col="red")
+mean(samplemean)  # mean of the sample means
+sd(samplemean)    # standard deviation of the sample means (standard error?)
 
-dbinom(1, 5, 0.5) #pdf
-pbinom(2, 8, 0.25) #cdf
+# small sample size -> use T rather than Z for building confidence intervals
+t = qt(.975,(n-1))
+z = -qnorm((1-.975)/2)
 
-for (i in 1:30000) {
+# For each sample, calculate the 95% confidence interval. 
+# Calculate the percent of confidence intervals that contain the true mean (65 inches)
+stderr = samplesd / sqrt(n)
+lower = samplemean - t*stderr
+upper = samplemean + t*stderr
 
-  x = x+ dbinom(1, 1000, 0.15) - dbinom(1, 1000, 0.05)
-}
+mean(lower>65) + mean(upper<65) # % of CI that miss the true mean
 
-
-
-
-meandiff = 0
-for (i in 1:10000) {
-  girls = rnorm(30, 60, 10)
-  boys = rnorm(30, 60, 10)
-  meandiff[i] = mean(girls) - mean(boys)
-}
-
-count = 0
-for (value in meandiff) {
-  if (value >= 5 | value <= -5) {
-    count = count + 1
-  }
-}
-
-hist(meandiff)
-
-
-
-
-
-
-
-
-
-
-
+# Why a T rather than a Z?
+Z = (samplemean-65) / (5/sqrt(n))
+hist(Z, col="red") # follows a Z when you use the true SD (=5 here)
+T = (samplemean-65) / stderr
+hist(T, col="red") # follows a T when you use the sample standard deviation
 
 
 # MIDTERM -----------------------------------------------------------------
 
+# Q1
+means=NA
+for (i in 0:162) {
+  means[i] = round(i/27, digits=2)
+}
 
-Q1
 
 sample = 0;
 means = 0
@@ -189,8 +206,7 @@ for (i in 1:100000) {
 table(round(means, 2))
 
 
-Q2
-
+# 2
 sample = 0;
 count = 0
 for (i in 1:100000) {
@@ -201,6 +217,26 @@ for (i in 1:100000) {
 }
 prob = count/100000
 
+# 2, correct
+p.final = NA   #initialize vector of probabilities
+for (i in 1:100000) {
+  #Set starting numbers of stars and chocolates
+  stars=20
+  chocolates=200
+  
+  #Simulate 30 chocolates being removed
+  for (j in 1:30) {
+    p = stars/chocolates     #current probability of a star
+    pickstar = rbinom(1,1,p) #whether the current student gets a star
+    
+    #Update number of stars and chocolates
+    if (pickstar==1) { stars = stars - 1 }
+    chocolates = chocolates - 1
+  }
+  
+  p.final[i] = p   #records the probability for the 30th chocolate
+}
+mean(p.final)
 
 Q7
 
@@ -215,6 +251,13 @@ for(p in pref){
 print(odds)
 
 plot(pref, odds, type = "l")
+
+ORs = NA
+for (i in 1:50) {
+  p = i/100
+  ORs[i] = 2 * ( (1-p) / (1-2*p) )
+}
+plot(ORs, xlab="Risk in the unexposed group (%)", ylab="Odds ratio", type="l")
 
 
 
@@ -234,76 +277,197 @@ for (i in 1:10000) {
 sum(pvals<0.01)/10000
 
 
-# UNIT 7 ------------------------------------------------------------------
-# wednesday exercise:
-data <- as.data.frame(read_excel("../../../Downloads/Unit7Data.xlsx"))
-length(which(data$fracture == 0))
-length(which(data$lowbmd == 1))
-# cor(data$fracture,data$bmdzscore) # wrong
-mean(data$bmdzscore[data$fracture == 0])
-sd(data$bmdzscore[data$fracture == 0])
-mean(data$bmdzscore[data$fracture == 1])
-sd(data$bmdzscore[data$fracture == 1])
-x = data$bmdzscore[data$fracture == 0]
-y = data$bmdzscore[data$fracture == 1]
 
+
+# Unit 6: pvalues ---------------------------------------------------------
+rnorm()
+t.test() # $p.value
+sum()
+hist()
+
+n = 50 #sample size
+
+# TYPE 1 ERROR - drug doesn't work
+# H0 = no diff
+
+pvals = 0    #Initialize an empty variable for the output
+
+for (i in 1:10000) {
+  #Create two randomly selected groups of size 50
+  drug = rnorm(n, mean=250, sd=25)
+  control = rnorm(n, mean=250, sd=25)
+  
+  #Apply the t.test() function, retrieve the p value with $p.value, and save 
+  #the number in the pvals array at position i
+  pvals[i] = t.test(drug,control)$p.value
+}
+
+sum(pvals < 0.05) / 10000
+hist(pvals, col="red")
+
+
+# Type II error (change to drug mean=240)
+pvals = 0    #Initialize an empty variable for the output
+u = 250 #mean
+
+for (i in 1:10000) {
+  #Create two randomly selected groups of size 50
+  drug = rnorm(n, mean=u-10, sd=25) #10 points better
+  control = rnorm(n, mean=u, sd=25)
+  
+  #Apply t.test() function, retrieve p value with $p.value
+  pvals[i] = t.test(drug,control)$p.value
+}
+
+sum(pvals > 0.05) / 10000
+hist(pvals, col="red")
+
+#Retry with different sample sizes other than n=50 per group!
+
+
+# Unit 7: statistical tests -----------------------------------------------
+boxplot()
+beeswarm()
+shapiro.test()
+t.test()
+aov()
+wilcox.test()
+table()
+prop.table()
+chisq.test()
+fisher.test()
+riskratio()
+oddsratio()
+
+#Draw boxplot with jittered datapoints superimposed, homework times in book smart vs. street smart students
 library(beeswarm)
-boxplot(bmdzscore ~ fracture, data, 
-        cex.lab=1.5, cex.axis=1.5, 
-        xlab='Street Smart=0, Book Smart=1',
-        ylab='Homework hrs per week')
-beeswarm(bmdzscore ~ fracture, data,
-         col = rainbow(8), cex=2, pch = 16, add=TRUE)
+boxplot(homework ~ IsBookSmart, data=classdata, cex.lab=.8, cex.axis=.8,  
+        xlab='Street Smart=0, Book Smart=1', ylab='Homework hrs per week')
+beeswarm(homework ~ IsBookSmart, data = classdata,
+         col = rainbow(8), cex=1, pch = 16, add=TRUE)
 
+#Test homework for normality
+shapiro.test(classdata$homework) # significant p-values indicate non-normal data
+# H0 = data are normally distributed
+# if p < 0.05, then H0 is rejected
+# bias by sample size. The larger the sample, the more likely you’ll get a statistically significant result
 
+#t-test 
+t.test(homework~IsBookSmart, data=classdata) # pooled
+t.test(homework~IsBookSmart, data=classdata, var.equal=TRUE) # unpooled
+# street smart does more homework, not significant
 
-dbinom(1, 6, 0.5) + dbinom(5, 6, 0.5)
-
-
-
-# UNIT 8 ------------------------------------------------------------------
-classdata <- as.data.frame(read_excel("../../../Downloads/classdata.xlsx"))
-plot(classdata$bushsr, classdata$bushjr,
-     col="red", pch=16)
-lines(loess.smooth(classdata$bushsr, classdata$bushjr, span=.80), col="red")
-
-model2 = glm(classdata$bushjr~classdata$bushsr+classdata$politics)
-summary(model2)
-
-obama = optimism
-classdata$varsity <- as.factor(classdata$varsity)
-qplot(alcohol, optimism, data=subset(classdata, !is.na(varsity)), 
-      color=varsity, geom=c("point","smooth"), method="lm", se=FALSE, 
-      ylab="optimism", xlab="alcohol (drinks/week)")
-
-model = glm(optimism~varsity+alcohol+varsity*alcohol, data=classdata)
+#ANOVA (equivalent to t-test, pooled)
+model = aov(homework~IsBookSmart, data=classdata)
 summary(model)
 
-R = seq(0, 1, 0.01)
-power = 0.5
-ppv=0
+#Wilcoxon rank-sum test: Split data into booksmart, streetsmart
+booksmart = classdata[classdata$IsBookSmart==1,]
+streetsmart = classdata[classdata$IsBookSmart==0,]
+wilcox.test(x=booksmart$homework, y=streetsmart$homework, exact=FALSE)
 
-PPVS = vector()
-PPVS2 = vector()
-PPVS3 = vector()
+#Paired t-test, math love vs. writing love
+t.test(classdata$Mathlove, classdata$WritingLove, paired=TRUE)
+# Math love is higher than writing love, though not significantly so (p=.099)
 
-for(i in R){
-  ppv = (power)*i/(i - power*i + 0.05)
-  PPVS <- append(PPVS, ppv)
-}
-print(PPVS)
+#2x2 table, row variable = varsity sports; column variable = book smart vs. street smart
+table = table(classdata$varsity, classdata$IsBookSmart)  #generates 2x2 table 
+table				#displays table with counts
 
-for(i in R){
-  ppv = (power)*i/(i - power*i + 0.01)
-  PPVS2 <- append(PPVS2, ppv)
-}
+prop.table(table)		#displays table with frequency
+chisq.test(table)		#perform a chi-squared test, warning for sparse data
+fisher.test(table)	#perform a Fisher’s exact test
 
-for(i in R){
-  ppv = (power)*i/(i - power*i + 0.005)
-  PPVS3 <- append(PPVS3, ppv)
-}
+riskratio(table)
+oddsratio(table)
 
-plot(R, PPVS, type = "l")
-lines(R, PPVS2, col = "red")
-lines(R, PPVS3, col = "green")
+# Unit 8: linear regression -----------------------------------------------
+plot()
+lines()
+loess.smooth()
+cor.test()
+glm()
+residulas()
 
+#Draw a scatter plot of ratings of former Presidents Obama and Bush Jr; superimpose a smoothing line
+plot(classdata$bushjr, classdata$obama,col="red", pch=16, cex=1, cex.lab=1.5,
+     xlab="Ratings of Bush Jr", ylab="Ratings of Obama")
+lines(loess.smooth(classdata$bushjr, classdata$obama, span=.8), col="red")
+# homogeneity of variances looks reasonable (equal scatter around the line)
+
+#Correlation coefficient
+cor.test(classdata$bushjr, classdata$obama) # Pearson's is default
+
+
+#Simple linear regression model
+model = glm(obama~bushjr, data=classdata)
+summary(model)
+# Beta coefficient = -.37, p=.0002
+# Interpretation: For every 1-point increase in liking of Bush Jr, 
+# there is an average .37 point decrease in liking of Obama.
+
+plot(model) #Residuals look reasonably normally distributed.
+hist(residuals(model), col="red")
+shapiro.test(residuals(model))
+
+#Multiple linear regression model
+model2 = glm(obama~bushjr+politics, data=classdata)
+summary(model2)
+# The beta coefficient for bushjr was -.37 before adjusting for politics; 
+# it’s -.04 after adjusting for politics. This means that nearly the entire 
+# relationship between bushjr and Obama ratings was driven by political leaning. 
+# The beta coefficient for politics is .65,
+# indicating that every 1-point increase in liberal leaning is 
+# associated with a .65-point increase in liking for Obama.
+
+plot(model2)
+hist(residuals(model2), col="red")
+shapiro.test(residuals(model2))
+
+
+# Unit 9: prin of regression ----------------------------------------------
+qplot()
+glm()
+as.factor()
+subset()
+
+#Make IsBookSmart a factor for graphing
+classdata$IsBookSmart = as.factor(classdata$IsBookSmart) # improves auto-legend in qplot
+qplot(politics, obama, data=subset(classdata, !is.na(IsBookSmart)), 
+      color=IsBookSmart, geom=c("point","smooth"), method="lm", se=TRUE, 
+      ylab="Obama Ratings (0-100)", 
+      xlab="Political Leaning (0=conservative, 100=liberal)")
+
+#Fit a linear regression model with interaction
+model = glm(obama ~ IsBookSmart + politics + politics*IsBookSmart, 
+            data=classdata) # var1*var2 specifies an interaction between the variables 
+summary(model)
+
+# Intercept (7.27): the intercept for the street-smart group.
+# IsBookSmart (26.5): the difference in the intercepts of the book-smart and street-smart groups. 
+#     Intercept for book smart group = 7.27 + 26.5 = 33.27
+# politics (.996): slope in the street-smart group
+# IsBookSmart*politics (-.404): diff in slopes of two groups. 
+#     Slope for book smart group = .996 - .404 = .592
+
+
+# FINAL -------------------------------------------------------------------
+#Set up x-axis
+odds = seq(0, 1, 0.001)
+prob = odds / (1 + odds)
+
+#Calculate PPVs for each significance level (can also use a for loop)
+PPV1 = 0.5*prob / ( 0.5*prob + 0.05*(1-prob) )
+PPV2 = 0.5*prob / ( 0.5*prob + 0.01*(1-prob) )
+PPV3 = 0.5*prob / ( 0.5*prob + 0.005*(1-prob) )
+
+#Create plot
+plot(NULL, xlab="Pre-Study Odds", ylab="PPV", xlim=c(0,1), ylim=c(0,1))
+points(odds, PPV1, pch=16, col="blue")
+points(odds, PPV2, pch=16, col="green")
+points(odds, PPV3, pch=16, col="red")
+
+
+
+#################
+#################
