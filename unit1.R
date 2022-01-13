@@ -1,4 +1,4 @@
-# SAS: https://odamid-usw2.oda.sas.com/SASStudio/main?locale=en_US&zone=GMT-08%253A00&ticket=ST-209379-K3HYTAFvaS7iHdaJnvLi-cas
+# SAS: https://welcome.oda.sas.com/login
 
 # modules ----
 library(Hmisc) #describe()
