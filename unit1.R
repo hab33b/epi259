@@ -150,9 +150,8 @@ hist()
 
 # Set the parameters of the simulation
 repeats = 10000
-n = 10
+n = 10 # Generate 10,000 samples of 10 
 
-# Generate 10,000 samples of 10 
 # population: µ = 65in & σ = 5in
 # For each sample, calculate the µ and σ of height in sample
 samplemean = 0
@@ -165,8 +164,8 @@ for (i in 1:repeats) {
 
 # Explore the distribution of the sample means
 hist(samplemean, col="red")
-mean(samplemean)  # mean of the sample means
-sd(samplemean)    # standard deviation of the sample means (standard error?)
+mean(samplemean)  # mean of sample means
+sd(samplemean)    # std of the sample means (standard error?)
 
 # small sample size -> use T rather than Z for building confidence intervals
 t = qt(.975,(n-1))
@@ -178,7 +177,7 @@ stderr = samplesd / sqrt(n)
 lower = samplemean - t*stderr
 upper = samplemean + t*stderr
 
-mean(lower>65) + mean(upper<65) # % of CI that miss the true mean
+mean(lower>65 | upper<65) # % of CI that miss the true mean
 
 # Why a T rather than a Z?
 Z = (samplemean-65) / (5/sqrt(n))
