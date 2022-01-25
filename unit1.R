@@ -1,3 +1,4 @@
+
 # SAS: https://welcome.oda.sas.com/login
 
 # modules ----
@@ -52,7 +53,7 @@ head(samplemean)
 summary() # boxplot info
 describe() # n missing, distinct, info, mean, gmd
 sd()
-mean()
+mean() # na.rm=TRUE is needed to remove NA values before calculating
 median()
 IQR()
 hist(col="", xlim=c(), breaks=)
@@ -397,7 +398,6 @@ lines(loess.smooth(classdata$bushjr, classdata$obama, span=.8), col="red")
 #Correlation coefficient
 cor.test(classdata$bushjr, classdata$obama) # Pearson's is default
 
-
 #Simple linear regression model
 model = glm(obama~bushjr, data=classdata)
 summary(model)
@@ -409,7 +409,7 @@ plot(model) #Residuals look reasonably normally distributed.
 hist(residuals(model), col="red")
 shapiro.test(residuals(model))
 
-#Multiple linear regression model
+# Multiple linear regression model
 model2 = glm(obama~bushjr+politics, data=classdata)
 summary(model2)
 # The beta coefficient for bushjr was -.37 before adjusting for politics; 
