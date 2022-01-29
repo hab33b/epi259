@@ -35,6 +35,11 @@ nrow(classdata)
 ncol(classdata)
 dim(classdata)
 
+#vector reference
+attach(classdata)
+# can just mention column vectors in here, don't need classdata$...
+detach(classdata)
+
 #cleaning data
 classdata$smoking_num <- ifelse(classdata$smoking=='Yes',1,0)
 
@@ -86,7 +91,6 @@ sum()
 days = sample(365, size=30, replace=TRUE)
 table(days)
 any(table(days)>1)
-
 
 matches = 0
 for (i in 1:10000) {
@@ -284,6 +288,7 @@ rnorm()
 t.test() # $p.value
 sum()
 hist()
+2*pnorm(Z, lower.tail=FALSE) # p-value (two-tailed)
 
 n = 50 #sample size
 
