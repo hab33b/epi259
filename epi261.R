@@ -1,19 +1,22 @@
 
+# SAS - https://welcom  e.oda.sas.com/home
+# https://stackoverflow.com/questions/11561284/classes-in-r-from-a-python-background
+
 # modules ----
 library(readxl)
 library(Hmisc) #describe()
 library(beeswarm) # unit 7
 library(epitools) # unit 1, riskratio(), oddsratio()
 library(ggplot2)
-
+library(abind) # unit 2
 
 # datasets ----------------------------------------------------------------
+library(readxl)
 classdata <- read_excel("Dataset.xls")
-kyphosis <- read_excel("kyphosis.xls")
-
+kyph <- read_excel("kyphosis.xls")
+hw5 <- read_excel("HOMEWORK5.xlsx")
 
 # INTRODUCTION ------------------------------------------------------------
-library(readxl)
 formals() body()
 data.frame()
 col1 = classdata[1] # col1_4 = classdata[1:4]
@@ -28,21 +31,24 @@ tt_table <- function(a,b,c,d,row="") {
   table = as.table(data) # convert to a table
   rownames(table) = c("+", "-") # outcome/disease
   colnames(table) = c(paste("c+",row), "c-") # cases/exposure
+  
   print(table) 
   cat("\n")
   
   # Fisher's Exact
-  cat(fisher.test(table)$method, "\n")
+  cat(fisher.test(table)$method, " (1-tailed)","\n")
   print(fisher.test(table)$p.value)
+  
   # Odds Ratio CI
   cat("\n")
   cat("Odds Ratio")
+  library(epitools)
   print(oddsratio.wald(table, rev="both")$measure)
   return(table)
 }
 table <-tt_table(28,511,53,1328, "(dep)")
-table <-tt_table(3,1,1,3)
-table <-tt_table(4,1,21,24)
+table <-tt_table(7,30,24,45)
+
 addmargins(table) # generate the 2x2 contingency table
 prop.table(table) # freq
 
@@ -53,7 +59,6 @@ mcnemar.test(table)
 oddsratio.wald(table, rev="both") # equivalent??? to oddsratio(table, rev="both")
 riskratio(table, rev="both") # rev="both": bc fx uses input r&c that are reversed relative to orig table
 # what is your increased risk of outcome if you're case
-
 
 # Function to calculate XX% confidence limits for an odds ratio 
 # for a given confidence level (entered as a whole number, eg “95”) 
@@ -71,7 +76,6 @@ ORfunction = function(confidence,a,b,c,d) {
   output
 }
 ORfunction(95,8,32,88,1045)
-
 
 
 # Unit 2: confounding,  interaction,  mediation,  mantel-haenszel ---------

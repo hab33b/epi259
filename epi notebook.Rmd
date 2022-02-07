@@ -1,0 +1,154 @@
+---
+title: "Epidemiology"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code.
+
+**COMMANDS**
+
++---------------+------------------+
+|               | Notebook Code    |
++==============:+:=================+
+| ⌘⇧**↩**       | Run              |
++---------------+------------------+
+| ⌘⌥**I**       | Insert chunk     |
++---------------+------------------+
+| ⌘⇧**K**       | Review HTML file |
++---------------+------------------+
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
+```{r}
+# datasets ----------------------------------------------------------------
+library(readxl)
+classdata <- read_excel("Dataset.xls")
+kyph <- read_excel("kyphosis.xls")
+hw5 <- read_excel("HOMEWORK5.xlsx")
+```
+
+```{r}
+# INTRODUCTION ------------------------------------------------------------
+formals() body()
+data.frame()
+col1 = classdata[1] # col1_4 = classdata[1:4]
+row1 = classdata[1,] # row1_4 = classdata[1:4,]
+subset = classdata[classdata$Varsity==1,]
+colnames = names(classdata) # names(classdata)[1] = "ID"
+hist(classdata$coffee, breaks=seq(0,50,by=3), col="red", xlab="Coffee")
+```
+
+## UNIT 1
+
+##### 2x2 CONTINGENCY TABLES
+
+```{r}
+tt_table <- function(a,b,c,d,row="") {
+  data = matrix(c(a,b,c,d), nrow=2, ncol=2, byrow=TRUE)
+  table = as.table(data) # convert to a table
+  rownames(table) = c("+", "-") # outcome/disease
+  colnames(table) = c(paste("c+",row), "c-") # cases/exposure
+  
+  print(table) 
+  cat("\n")
+  
+  # Fisher's Exact
+  cat(fisher.test(table)$method, " (1-tailed)","\n")
+  print(fisher.test(table)$p.value)
+  
+  # Odds Ratio CI
+  cat("\n")
+  cat("Odds Ratio")
+  library(epitools)
+  print(oddsratio.wald(table, rev="both")$measure)
+  return(table)
+}
+table <-tt_table(28,511,53,1328, "(dep)")
+table <-tt_table(7,30,24,45)
+```
+
+##### TESTS
+
+```{r}
+addmargins(table) # generate the 2x2 contingency table
+prop.table(table) # freq
+fisher.test(table)
+chisq.test(table)
+mcnemar.test(table)
+oddsratio.wald(table, rev="both") 
+# equivalent??? to oddsratio(table, rev="both")
+riskratio(table, rev="both") 
+# rev="both": bc fx uses input r&c that are reversed relative to orig table
+# what is your increased risk of outcome if you're case
+```
+
+##### ODDS RATIO
+
+Function to calculate XX% confidence limits for an odds ratio for a given confidence level (entered as a whole number, eg "95") and the 2x2 cell sizes: a,b,c,d, where a is the diseased, exposed cell
+
+```{r}
+ORfunction = function(confidence,a,b,c,d) {
+  # enter confidence percent as a whole number, e.g. "95"
+  OR = (a*d) / (b*c)
+  lnOR = log(OR)
+  error = sqrt(1/a + 1/b + 1/c + 1/d)
+  Z = -qnorm((1 - confidence/100)/2) # gives left hand Z score
+  lower = exp(lnOR - Z*error)
+  upper = exp(lnOR + Z*error)
+  output = c(OR, lower, upper)
+  names(output) = c("OR", "lower", "upper")
+  output
+}
+ORfunction(95,8,32,88,1045)
+```
+
+## UNIT 2
+
+##### CONFOUNDING \| INTERACTION \| MEDIATION \| MANTEL-HAENSZEL
+
+##### CMH TEST
+
+```{r CMH TEST}
+# whether gender is related to admissions after stratifying on program
+# i.e. association of program and gender stratified on program
+# H0: pred & outcome are independent
+# p < 0.05 reject H0 (i.e. there is interaction)
+library(abind)
+tableA = matrix(c(19,89,314,511), nrow=2, ncol=2, byrow=TRUE)
+tableB = matrix(c(8,17,208,352), nrow=2, ncol=2, byrow=TRUE)
+tableC = matrix(c(391,202,205,120), nrow=2, ncol=2, byrow=TRUE)
+tableD = matrix(c(248,127,265,142), nrow=2, ncol=2, byrow=TRUE)
+tableE = matrix(c(289,104,147,44), nrow=2, ncol=2, byrow=TRUE)
+tableF = matrix(c(321,20,347,26), nrow=2, ncol=2, byrow=TRUE)
+data = abind(tableA, tableB, tableC, tableD, tableE, tableF, along=3)
+print(data)
+
+mantelhaen.test(data)
+source("breslowday.test.R") # import function from separate file
+breslowday.test(data)
+```
+
+##### LOGISTIC REGRESSION INTRO
+
+```{r}
+# data
+program = c("A","A","A","A","B","B","B","B","C","C","C","C","D","D","D","D","E",
+            "E","E","E","F","F","F","F")
+IsFemale = c(1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0)
+Denied = c(1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0)
+Count = c(19,89,314,511,8,17,208,352,391,202,205,120,248,127,265,142,289,104,
+          147,44,321,20,347,26)
+datad = data.frame(program, IsFemale, Denied, Count)
+print(data)
+
+# # linear regression
+# glm(y~x, data=dataname)
+# # y~x - y as a function of x
+# 
+# # logistical regression
+# glm(y~x, family="binomial", data=dataname)
+# 
+# # logistical regression with confounding
+# glm(y~x, family="binomial", data=dataname)
+
+```
