@@ -394,9 +394,10 @@ cor.test()
 glm()
 residulas()
 
-#Draw a scatter plot of ratings of former Presidents Obama and Bush Jr; superimpose a smoothing line
+#Draw a scatter plot of ratings of former Presidents Obama and Bush Jr; 
 plot(classdata$bushjr, classdata$obama,col="red", pch=16, cex=1, cex.lab=1.5,
      xlab="Ratings of Bush Jr", ylab="Ratings of Obama")
+#superimpose a smoothing line
 lines(loess.smooth(classdata$bushjr, classdata$obama, span=.8), col="red")
 # homogeneity of variances looks reasonable (equal scatter around the line)
 

@@ -54,7 +54,7 @@ prop.table(table) # freq
 
 #tests
 fisher.test(table)
-chisq.test(table)
+chisq.test(table, correct=F)
 mcnemar.test(table)
 oddsratio.wald(table, rev="both") # equivalent??? to oddsratio(table, rev="both")
 riskratio(table, rev="both") # rev="both": bc fx uses input r&c that are reversed relative to orig table

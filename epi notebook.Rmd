@@ -19,23 +19,59 @@ This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute
 
 The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
 
-```{r}
-# datasets ----------------------------------------------------------------
+
+```{r MODULES}
 library(readxl)
-classdata <- read_excel("Dataset.xls")
-kyph <- read_excel("kyphosis.xls")
-hw5 <- read_excel("HOMEWORK5.xlsx")
+library(Hmisc) #describe()
+library(beeswarm) # unit 7
+library(epitools) # unit 1, riskratio(), oddsratio()
+library(ggplot2)
+library(abind) # unit 2
+library(epitools)
+library(boot) # unit 7
+library(psych) # principal()
+library(lmtest) # lrtest()
+library(todor)
 ```
 
-```{r}
-# INTRODUCTION ------------------------------------------------------------
-formals() body()
+```{r DATASETS}
+library(readxl)
+classdata <- read_excel("datasets/Dataset.xls")
+# unit 3
+hw3 <- read_excel("datasets/hw3.xlsx")
+lab3 <- read_excel("datasets/psa.xls")
+# unit 4
+hw4 <- read_excel("datasets/kyphosis.xls")
+# unit 5
+lab5 <- read_excel("datasets/decathlon-1.xls")
+hw5 <- read_excel("datasets/hw5.xlsx")
+# unit 6
+lab6 <- read_excel("datasets/lab6data.xlsx")
+# unit 7
+hw7 <- read_excel("datasets/hw7.xlsx")
+# unit 8
+lab8 <- read_excel("datasets/RUNNERS_R.xlsx")
+# unit 9
+lab9 <- read_excel("datasets/eyedataB.xls")
+
+```
+
+```{r INTRODUCTION}
+formals(); body()
 data.frame()
 col1 = classdata[1] # col1_4 = classdata[1:4]
 row1 = classdata[1,] # row1_4 = classdata[1:4,]
 subset = classdata[classdata$Varsity==1,]
 colnames = names(classdata) # names(classdata)[1] = "ID"
 hist(classdata$coffee, breaks=seq(0,50,by=3), col="red", xlab="Coffee")
+```
+
+```{r FUNCTIONS}
+todor::todor_file("epi notebook.Rmd")
+todor()
+tt_table()
+ORfunction()
+glm_function()
 ```
 
 ## UNIT 1
@@ -63,8 +99,7 @@ tt_table <- function(a,b,c,d,row="") {
   print(oddsratio.wald(table, rev="both")$measure)
   return(table)
 }
-table <-tt_table(28,511,53,1328, "(dep)")
-table <-tt_table(7,30,24,45)
+table <-tt_table(112,79,102,116, "(fruc)")
 ```
 
 ##### TESTS
@@ -73,9 +108,9 @@ table <-tt_table(7,30,24,45)
 addmargins(table) # generate the 2x2 contingency table
 prop.table(table) # freq
 fisher.test(table)
-chisq.test(table)
+chisq.test(table, correct=F)
 mcnemar.test(table)
-oddsratio.wald(table, rev="both") 
+oddsratio.wald(table, rev="both")
 # equivalent??? to oddsratio(table, rev="both")
 riskratio(table, rev="both") 
 # rev="both": bc fx uses input r&c that are reversed relative to orig table
@@ -104,8 +139,6 @@ ORfunction(95,8,32,88,1045)
 
 ## UNIT 2
 
-##### CONFOUNDING \| INTERACTION \| MEDIATION \| MANTEL-HAENSZEL
-
 ##### CMH TEST
 
 ```{r CMH TEST}
@@ -121,34 +154,380 @@ tableD = matrix(c(248,127,265,142), nrow=2, ncol=2, byrow=TRUE)
 tableE = matrix(c(289,104,147,44), nrow=2, ncol=2, byrow=TRUE)
 tableF = matrix(c(321,20,347,26), nrow=2, ncol=2, byrow=TRUE)
 data = abind(tableA, tableB, tableC, tableD, tableE, tableF, along=3)
-print(data)
 
-mantelhaen.test(data)
-source("breslowday.test.R") # import function from separate file
+# confounder / mediator
+mantelhaen.test(data, correct=F)
+
+# effect modifier
+source("functions/breslowday.test.R") # import function from separate file
 breslowday.test(data)
 ```
 
 ##### LOGISTIC REGRESSION INTRO
 
-```{r}
-# data
-program = c("A","A","A","A","B","B","B","B","C","C","C","C","D","D","D","D","E",
-            "E","E","E","F","F","F","F")
-IsFemale = c(1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0)
-Denied = c(1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0)
-Count = c(19,89,314,511,8,17,208,352,391,202,205,120,248,127,265,142,289,104,
-          147,44,321,20,347,26)
-datad = data.frame(program, IsFemale, Denied, Count)
-print(data)
+```{r logistic-regression}
+# Gender bias in berkeley?
 
-# # linear regression
-# glm(y~x, data=dataname)
-# # y~x - y as a function of x
-# 
-# # logistical regression
-# glm(y~x, family="binomial", data=dataname)
-# 
-# # logistical regression with confounding
-# glm(y~x, family="binomial", data=dataname)
+# data
+program = c(rep("A",4), rep("B",4), rep("C",4), rep("D",4), rep("E",4), rep("F",4))
+IsFemale = rep(c(1,1,0,0),length(program)/4) # case
+Denied = rep(c(1,0,1,0),length(program)/4) # outcome
+count = c(19,89,314,511,8,17,208,352,391,202,205,120,248,127,265,142,289,104,
+          147,44,321,20,347,26)
+data2 = data.frame(program, IsFemale, Denied, count)
+
+# logistical regression ----
+data2$program = relevel(factor(data2$program), ref="F") # change reference group
+glm.fit = glm(Denied~IsFemale+program+IsFemale*program, family="binomial", data=data2, weights=count)
+summary(glm.fit)
+# y~x - y as a function of x
+# family="binomial" - categorical outcome
+# w/o confounding
+    # IsFemale - β of 0.6 (& p-value is sig)
+    # females are more likely to be denied 
+# w/ confounding (+)
+    # programA is set as reference group
+    # IsFemale = -0.099
+# effect modifier (+A*B)
+    # to test interaction (similar to BreslowDay test)
+```
+
+##### MCNEMAR'S TEST
+
+```{r}
+# There are 37 discordant pairs where the case had diabetes; 
+# and only 16 where the control had diabetes. Under the 
+# null hypothesis, there should be 53/2=26.5 pairs of each. 
+# Is 37/16 significantly different from 26.5/26.5?  YES.
+data = matrix(c(9,37,16,82), nrow=2, ncol=2, byrow=TRUE)
+table = as.table(data)
+colnames(table) = c("Controls with diabetes", "Controls without diabetes")
+rownames(table) = c("Cases with diabetes", "Cases without diabetes")
+table
+mcnemar.test(table)
+# sig p-value means 
+# much more likely to see diabetes in case than control
+```
+
+## UNIT 3
+
+##### LOGISTIC REGRESSION I
+
+```{r}
+data <- lab3
+
+# capsule = outcome, rest are predictors
+glm.fit = glm(capsule~I(psa/10)+age+vol+race+gleason, family="binomial", data=data)
+summary(glm.fit)
+# psa          0.027864   0.009333   2.986  0.00283 ** 
+    # psa has positive & sig relationship with capsule = 1
+    # 1 unit increase is associated with small Beta 0.03
+    # bc units for psa is very small (ranges from 1 to 100)
+
+#     Null deviance: 506.59  on 375  degrees of freedom
+# Residual deviance: 397.04  on 370  degrees of freedom
+# ------------------------------------------------------
+    # -2ln(likelihood) = 397.04
+    # smaller means higher likelihood
+
+# AIC: 409.04
+# -----------
+    # -2ln(likelihood) + 2(# parameters {6})
+    # goal is to find lowest AIC (best-fit model)
+
+# odds ratio
+exp(coef(glm.fit))
+exp(confint(glm.fit)) # , level=0.99
+
+# linear in the logit ----
+
+# The logistic model assumes that continuous predictors are "linear in the logit.”You need to test this assumption for all continuous predictors.
+
+# Linearity means that for every 1-unit increase in psa, the increase in the logit of capsule should be the same, across all levels of psa. (Or in other words, the graph of the logit as a function of psa is linear.)
+
+# If psa is not linear in the logit, then we cannot use logistic regression
+
+# categorical variables
+library(gtools)
+source("functions/logit.plot.R")
+
+data$psaCat = quantcut(data$psa)
+levels(data$psaCat) = c("1","2","3","4")
+# logit.plot(data, predictor, outcome, intervals)
+logit.plot(data, "psa", "capsule", 20)
+# arrange people from the lowest to highest psa and divide group by 20
+# find count -> percent -> logit of people that had capsule = 1 in each group
+# plot logit of capsule to mean psa in each group
+# wanna find linear relationship
+```
+
+##### EXACT LOGISTIC REGRESSION
+
+```{r}
+library(logistf)
+exact.fit = logistf(capsule~age+psa, family="binomial", data=data)
+summary(exact.fit)
+exp(coef(exact.fit))
+exp(confint(exact.fit)) # , level=0.99
+```
+
+##### HW 3
+
+```{r}
+# Estimate the probability of thermal distress at 31°F
+hw3 <- read_excel("hw3.xlsx")
+glm.fit = glm(TD~Temp, family="binomial", data=hw3)
+newdata = data.frame(Temp=64.794)
+predict(glm.fit, newdata, type="response")
+```
+
+## UNIT 4
+
+##### LOGISTIC REGRESSION II
+
+```{r}
+library(pROC)
+source("functions/roc.curve.R")
+data <- lab3
+
+# ROC curves
+glm.fit = glm(capsule~psa+age+gleason, family=binomial, data=data)
+roc.curve(glm.fit, data, "capsule", returnValues = T)
+  # returnValues = T # lists each point on ROC
+  # returnPred = T
+  # returnROC = T
+  
+  # 359 0.9114096588 0.111111111 0.995594714
+  # point on ROC curve = predicted prob (p). Ex: if we use a p of .9114 as the cutoff for a positive test, we will have a sensitivity of just 11.1% (we will only catch a few of the events), but a specificity close to 100% (almost no false positives).
+
+# predicted probabilities & residuals
+output = roc.curve(glm.fit, psa, "capsule", returnPred=TRUE)
+  # ~ OR ~
+predict(glm.fit, type=c("response")) # = output$prediction
+
+residuals = data$capsule - output$prediction
+data.frame(output, residuals)
+plot(data$gleason, output$prediction) # plot the p or the residuals against each predictor
+
+  # p for values of predictors not in dataset
+  newdata = data.frame(psa=0.1,age=45,gleason=5)
+  predict(glm.fit, newdata, type="response") 
+
+# test for confounding
+glm.fit = glm(capsule~psa, family="binomial", data=data)
+glm.fit2 = glm(capsule~psa+race, family="binomial", data=data)
+glm.fit$coefficients
+glm.fit2$coefficients
+
+# test for interaction (effect modifiers) 
+glm.fit3 = glm(capsule~psa+race+psa*race, family="binomial", data=data)
+summary(glm.fit3)
+
+# calculate OR when there is interaction
+data2 = data[!is.na(data$race),]    # remove rows where race is NA
+dataRace0 = data2[data2$race==0,]   # make a dataset with rows where race==0
+dataRace1 = data2[data2$race==1,]   # make a dataset with rows where race==1
+
+glm.fit = glm(capsule~psa, family="binomial", data=dataRace0)
+glm.fit2 = glm(capsule~psa, family="binomial", data=dataRace1)
+exp(coef(glm.fit))
+exp(coef(glm.fit2))
 
 ```
+
+##### HW 4
+```{r}
+data = hw4
+sum(data$Kyphosis == 1, na.rm=T)
+logit.plot(data,"Start","Kyphosis", 10)
+# 11, 12
+data$AgeSquared = data$Age**2
+glm.fit = glm(Kyphosis~Age+AgeSquared+Number+Start, family = binomial, data = data)
+roc.curve(glm.fit, data, "Kyphosis")
+```
+
+
+## UNIT 5
+
+##### STANDARDIZATION, CORRELATION, PCA
+
+```{r}
+library(psych) # principal()
+library(lmtest) # lrtest()
+
+data <- lab5
+
+# 1. standardize variables
+data[1:10] = scale(data[1:10]) # convert to Z scores mean = 0, SD = 1
+data[c("The100m", "The400m", "The1500m", "hurdles")] = 
+  -data[c("The100m", "The400m", "The1500m", "hurdles")] # make better 
+
+# 2. examine correlation
+cor(data[1:10], use="complete.obs") # complete.obs - eliminates rows with NA
+list = cor(data[1:10], use="complete.obs")[1,] # 1st row of correlation matrix
+list[order(abs(list), decreasing=TRUE)]
+  # abs()  - order the entries by absolute value
+  # note #1 is always the variable being analyzed (with value 1.000)
+
+# 3. pca analysis
+pca = principal(data[1:10], nfactors=4, rotate="varimax")
+  # 1:10 selects the first 10 columns, since we don’t want to include 11 or 12
+  # principal: will impute missing values using mean or median
+
+# 4. component retention (how many factors to keep?)
+pca$values # eigenvalues (variance)
+plot(pca$values, xlab=" component", ylab="Eigenvalues") # Scree Plot
+pca$loadings # which of variables loads on the factors
+  # correlation coef between variables and PCs
+
+# 5. explore factors
+pca$weights # coefficients
+factor1 = apply(data[1:10], 1, function(x) sum(x*pca$weights[,1]))
+factor2 = apply(data[1:10], 1, function(x) sum(x*pca$weights[,2]))
+factor3 = apply(data[1:10], 1, function(x) sum(x*pca$weights[,3]))
+factor4 = apply(data[1:10], 1, function(x) sum(x*pca$weights[,4]))
+
+glm.fit = glm(Rank~factor1+factor2+factor3+factor4, data=data)
+summary(glm.fit)
+# factors are orthogonal to each other (not correlated)
+# predicting rank (so low rank is good)
+
+lrtest(glm.fit)
+
+# TODO hw 5: 5, 6, 7, 8, 9, 10, 11, 12, 13, 14
+# TODO week 5 exercises
+```
+
+## UNIT 6
+
+##### EXPLANATORY MODELING
+```{r}
+data <- lab6
+
+# explanatory modeling
+glm_function = function(outcome, predictor) {
+  glm.fit = glm(outcome~predictor, family = binomial)
+  print(summary(glm.fit))
+  return(glm.fit)
+}
+
+glm.fit = glm_function(data$MACE, data$age)
+pscores = predict(glm.fit, type="response")
+pscores
+
+# match observations to each other based on the propensity scores
+matches = Match(data$MACE, data$cilostazol, pscores, replace=FALSE, 
+caliper=0.1)
+summary(matches)
+
+# create a dataset containing the matched pairs, and then merge the information on the matched pairs back with the original dataset.
+pairs  =  data.frame(c(1:length(matches$index.treated),  matches$index.treated, 
+matches$index.control))
+names(pairs) = c("Index", "Treated", "Control")    #rename the columns
+#Create a new column in the original dataset and use the information from the "pairs” dataset to enter each person’s pair number. 
+data$matches = NA   #initialize column
+for (i in pairs$Treated) {
+  data$matches[i] = pairs$Index[which(pairs$Treated==i)] 
+}
+for (i in pairs$Control) {
+  data$matches[i] = pairs$Index[which(pairs$Control==i)]
+}
+data = data[!is.na(data$matches),]  #remove unmatched data
+
+clogit.fit = clogit(y~x1+x2+strata(pairID), data=data.matched)
+  #y is the outcome, x1 and x2 are predictors, and pairID gives the strata
+  #Since this function only applies to logistic regression, no family argument is needed
+
+quantiles = quantile(pscores, probs=seq(0, 1, 0.2))
+  #Here I am asking for quintiles, i.e. 5 groups (indicated by 0.2 in the probs argument). But you could ask for quartiles (0.25), deciles (0.1), etc. depending on the size of your dataset.
+
+data$pscoreGroup = cut(pscores, breaks=quantiles, labels=FALSE, include.lowest=TRUE)
+```
+
+## UNIT 7
+
+##### PREDICTIVE MODELING
+
+```{r}
+library(boot)
+data <- hw7
+# BOOTSTRAP SAMPLING
+set.seed(1)
+
+# method 1
+boot(data, statistic, R=100) # call function R times
+statistic = function(data, selection) {
+  glm.fit = glm(fracture~dairy, data=data[selection,], family="binomial")
+  return(coef(glm.fit)[2])
+}
+
+# method 2
+beta = matrix(0,ncol=1,nrow=100)    #initializing
+for (i in 1:100) {
+  selection = sample(1:119, 119, replace=T)
+  glm.fit = glm(fracture~dairy, data=data[selection,], family="binomial")
+  beta[i] = coef(glm.fit)[2]
+}
+
+
+```
+
+
+
+
+## UNIT 8
+
+##### MULTINOMIAL & ORDINAL LOGISTIC REGRESSION
+```{r}
+
+data = lab8
+data$mencat=as.factor(data$mencat)
+# cumulative logit plots
+
+# Comparing highly abnormal vs normal (excluding abnormal)
+logits = rep(0,10)
+for (j in c(1,11,21,31,41,51,61,71,81,91)) {
+  positive=negative=0
+  for (i in c(j:(j+9))) {
+    if (data$hiAb[i] == 1) {positive = positive + data$count[i]
+    } else if (data$ab[i] == 0) {negative = negative + data$count[i]}
+  }
+x = positive/(positive+negative)
+logits[1+round(j/10)] = log(x/(1-x))
+}
+plot(logits)
+
+
+#Comparing highly abnormal and abnormal vs normal: same code with different 
+conditions
+logits2 = rep(0,10)
+for (j in c(1,11,21,31,41,51,61,71,81,91)) {
+  positive=negative=0
+  for (i in c(j:(j+9))) {
+    if (data$hiAb[i] == 1 | data$ab[i] == 1) {positive = positive + 
+data$count[i]
+    } else {negative = negative + data$count[i]}
+  }
+x = positive/(positive+negative)
+logits2[1+round(j/10)] = log(x/(1-x))
+}
+plot(logits2)
+```
+
+
+## UNIT 9
+
+##### CORRELATED DATA
+
+```{r}
+data <- lab9
+data
+```
+
+
+
+##
+
+
+
+
