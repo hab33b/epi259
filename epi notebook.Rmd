@@ -32,6 +32,8 @@ library(boot) # unit 7
 library(psych) # principal()
 library(lmtest) # lrtest()
 library(todor)
+library(survival) #clogit()
+library(gee) # gee()
 ```
 
 ```{r DATASETS}
@@ -52,7 +54,14 @@ hw7 <- read_excel("datasets/hw7.xlsx")
 # unit 8
 lab8 <- read_excel("datasets/RUNNERS_R.xlsx")
 # unit 9
-lab9 <- read_excel("datasets/eyedataB.xls")
+lab9a <- read_excel("datasets/eyedataW.xls")
+# Dataset 1: eyedataW is a randomized trial in which individual patients were randomized to treatment and placebo in different eyes.
+lab9b <- read_excel("datasets/eyedataB.xls") 
+# Dataset 2: eyedataB is a randomized trial in which patients were randomized to receive a treatment in both eyes or a placebo in both eyes.
+lab9c <- read_excel("datasets/ClusterRCT.xlsx")
+lab9d <- read_excel("datasets/ClusterRCT2.xlsx")
+
+
 
 ```
 
@@ -69,9 +78,11 @@ hist(classdata$coffee, breaks=seq(0,50,by=3), col="red", xlab="Coffee")
 ```{r FUNCTIONS}
 todor::todor_file("epi notebook.Rmd")
 todor()
-tt_table()
-ORfunction()
-glm_function()
+my.tt_table()
+my.ORfunction()
+my.glm_function()
+my.stan_diffs()
+my.matching()
 ```
 
 ## UNIT 1
@@ -79,7 +90,7 @@ glm_function()
 ##### 2x2 CONTINGENCY TABLES
 
 ```{r}
-tt_table <- function(a,b,c,d,row="") {
+my.tt_table <- function(a,b,c,d,row="") {
   data = matrix(c(a,b,c,d), nrow=2, ncol=2, byrow=TRUE)
   table = as.table(data) # convert to a table
   rownames(table) = c("+", "-") # outcome/disease
@@ -99,7 +110,7 @@ tt_table <- function(a,b,c,d,row="") {
   print(oddsratio.wald(table, rev="both")$measure)
   return(table)
 }
-table <-tt_table(112,79,102,116, "(fruc)")
+table <- my.tt_table(112,79,102,116, "(fruc)")
 ```
 
 ##### TESTS
@@ -122,7 +133,7 @@ riskratio(table, rev="both")
 Function to calculate XX% confidence limits for an odds ratio for a given confidence level (entered as a whole number, eg "95") and the 2x2 cell sizes: a,b,c,d, where a is the diseased, exposed cell
 
 ```{r}
-ORfunction = function(confidence,a,b,c,d) {
+my.ORfunction = function(confidence,a,b,c,d) {
   # enter confidence percent as a whole number, e.g. "95"
   OR = (a*d) / (b*c)
   lnOR = log(OR)
@@ -134,7 +145,7 @@ ORfunction = function(confidence,a,b,c,d) {
   names(output) = c("OR", "lower", "upper")
   output
 }
-ORfunction(95,8,32,88,1045)
+my.ORfunction(95,8,32,88,1045)
 ```
 
 ## UNIT 2
@@ -235,8 +246,7 @@ summary(glm.fit)
     # -2ln(likelihood) + 2(# parameters {6})
     # goal is to find lowest AIC (best-fit model)
 
-# odds ratio
-exp(coef(glm.fit))
+exp(coef(glm.fit)) # odds ratio
 exp(confint(glm.fit)) # , level=0.99
 
 # linear in the logit ----
@@ -400,48 +410,118 @@ lrtest(glm.fit)
 
 ## UNIT 6
 
-##### EXPLANATORY MODELING
+##### EXPLANATORY MODELING (confounding by indication)
+
+###### PROPENSITY SCORE
 ```{r}
+
 data <- lab6
 
 # explanatory modeling
-glm_function = function(outcome, predictor) {
-  glm.fit = glm(outcome~predictor, family = binomial)
+my.glm_function =  function(outcome, predictor) {
+  glm.fit <- glm(outcome~predictor, family = binomial)
   print(summary(glm.fit))
   return(glm.fit)
 }
 
-glm.fit = glm_function(data$MACE, data$age)
-pscores = predict(glm.fit, type="response")
-pscores
+glm.fit = my.glm_function(data$MACE, data$cilostazol)
 
-# match observations to each other based on the propensity scores
-matches = Match(data$MACE, data$cilostazol, pscores, replace=FALSE, 
-caliper=0.1)
+# propensity score
+
+# let's see if cilostazol (predictor) is confounded by other vars in dataset
+# quick way to check which of the predictors are related to who is on cilostazol
+# check if OR is positive
+my.glm_function(data$cilostazol, data$hypertension) # 0.763 - positive
+my.glm_function(data$cilostazol, data$maleGender) # 0.5849 - (+) more men take cilostazol
+
+# calc standardized difference before matching
+my.stan_diffs = function(subdata1, subdata0, colRange) {
+  for (i in colRange) {
+    mean1 = mean(subdata1[[i]])
+    mean0 = mean(subdata0[[i]])
+    sd1 = sd(subdata1[[i]])
+    sd0 = sd(subdata0[[i]])
+    print(abs(mean1-mean0) / ((sd1+sd0)/2))
+  }
+}
+cilo.pos = data[data$cilostazol==1,]
+cilo.neg = data[data$cilostazol==0,]
+my.stan_diffs(cilo.pos, cilo.neg, 3:15) # all but one are > 10%
+
+# fit propensity score model
+glm.fit = glm(cilostazol~., family = binomial, data = data[-c(1,15)])
+summary(glm.fit)
+
+# How likely each person had cilostazol
+pscores = predict(glm.fit, type="response") # "response" - predicted probabilities
+
+mean(pscores[data$cilostazol==0])   # 0.238
+mean(pscores[data$cilostazol==1])   # 0.524
+
+# is there overlap?
+hist(pscores[data$cilostazol==0])
+hist(pscores[data$cilostazol==1])
+```
+
+###### MATCHING
+```{r}
+library(Matching)
+data = data
+paired_data = NA
+# Identify matched pairs and merge info to original dataset.
+
+matches = Match(data$MACE, data$cilostazol, pscores, replace=FALSE, caliper=0.1)
+  # caliper = how closely to match things
 summary(matches)
 
-# create a dataset containing the matched pairs, and then merge the information on the matched pairs back with the original dataset.
-pairs  =  data.frame(c(1:length(matches$index.treated),  matches$index.treated, 
-matches$index.control))
-names(pairs) = c("Index", "Treated", "Control")    #rename the columns
-#Create a new column in the original dataset and use the information from the "pairs” dataset to enter each person’s pair number. 
-data$matches = NA   #initialize column
-for (i in pairs$Treated) {
-  data$matches[i] = pairs$Index[which(pairs$Treated==i)] 
+my.matching = function(data, matches) {
+  # create dataset of matched pairs
+  pairs = data.frame(c(1:length(matches$index.treated)), matches$index.treated, matches$index.control)
+  names(pairs) = c("Index", "Treated", "Control")
+  
+  # Enter each person's pair number.
+  data$pairID = NA   #initialize column
+  for (i in pairs$Treated) {
+    data$pairID[i] = pairs$Index[which(pairs$Treated==i)] 
+  }
+  for (i in pairs$Control) {
+    data$pairID[i] = pairs$Index[which(pairs$Control==i)]
+  }
+  data = data[!is.na(data$pairID),]  # remove unmatched data
 }
-for (i in pairs$Control) {
-  data$matches[i] = pairs$Index[which(pairs$Control==i)]
-}
-data = data[!is.na(data$matches),]  #remove unmatched data
+paired_data = my.matching(data, matches)
 
-clogit.fit = clogit(y~x1+x2+strata(pairID), data=data.matched)
-  #y is the outcome, x1 and x2 are predictors, and pairID gives the strata
-  #Since this function only applies to logistic regression, no family argument is needed
+# Redefine cilo.pos and cilo.neg for the matched dataset
+cilo.pos = paired_data[paired_data$cilostazol==1,]
+cilo.neg = paired_data[paired_data$cilostazol==0,]
+# Apply function
+my.stan_diffs(cilo.pos, cilo.neg, 3:15)
+```
 
-quantiles = quantile(pscores, probs=seq(0, 1, 0.2))
-  #Here I am asking for quintiles, i.e. 5 groups (indicated by 0.2 in the probs argument). But you could ask for quartiles (0.25), deciles (0.1), etc. depending on the size of your dataset.
+###### conditional logistic regression
+```{r}
+library(survival)
 
+# only compare outcome with pairs
+clogit.fit = clogit(MACE~cilostazol+strata(pairID), data=paired_data)
+  # clogit.fit = clogit(y~x1+x2+strata(pairID), data=data.matched)
+  # y - outcome | x1 and x2 - predictors | pairID gives the strata
+  # Since this function only applies to logistic regression, no family argument needed
+summary(clogit.fit)
+```
+
+###### other methods (doesn't as strongly account for confounding by indication)
+```{r}
+# adjust for rather than match on propensity score
+glm.fit = glm(MACE~cilostazol+pscores, family="binomial", data=data)
+summary(glm.fit)
+
+# stratifying on quintile of propensity score 
+quantiles = quantile(pscores, probs=seq(0, 1, 0.2)) # can ask for quartiles (0.25), deciles (0.1) ... depending on the size of dataset.
+pscoreGroup = cut(pscores, breaks=quantiles, labels=FALSE, include.lowest=TRUE)
 data$pscoreGroup = cut(pscores, breaks=quantiles, labels=FALSE, include.lowest=TRUE)
+glm.fit = glm(MACE~cilostazol+pscoreGroup, family="binomial", data=data)
+summary(glm.fit)
 ```
 
 ## UNIT 7
@@ -520,8 +600,18 @@ plot(logits2)
 ##### CORRELATED DATA
 
 ```{r}
-data <- lab9
-data
+data1 <- lab9a
+data2 <- lab9b
+
+clogit.fit = clogit(y~x1+x2+strata(varName), data=data)
+  # variable to be stratified on is included as strata(varName)
+  # only applies to logistic regression
+
+gee.fit = gee(y~x1+x2+x3, id=clusterName, data=data, corstr="exchangeable", family="binomial")
+  # id: tells function which column defines the clusters
+  # corstr: specifies the type of correlation matrix - "independence", "fixed", "stat_M_dep", "non_stat_M_dep", "exchangeable", "AR-M", and "unstructured"
+
+summary(gee.fit)
 ```
 
 
