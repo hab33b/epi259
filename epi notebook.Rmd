@@ -51,6 +51,7 @@ hw5 <- read_excel("datasets/hw5.xlsx")
 lab6 <- read_excel("datasets/lab6data.xlsx")
 # unit 7
 hw7 <- read_excel("datasets/hw7.xlsx")
+lab7 <- hw4
 # unit 8
 lab8 <- read_excel("datasets/RUNNERS_R.xlsx")
 # unit 9
@@ -58,8 +59,8 @@ lab9a <- read_excel("datasets/eyedataW.xls")
 # Dataset 1: eyedataW is a randomized trial in which individual patients were randomized to treatment and placebo in different eyes.
 lab9b <- read_excel("datasets/eyedataB.xls") 
 # Dataset 2: eyedataB is a randomized trial in which patients were randomized to receive a treatment in both eyes or a placebo in both eyes.
-lab9c <- read_excel("datasets/ClusterRCT.xlsx")
-lab9d <- read_excel("datasets/ClusterRCT2.xlsx")
+hw9a <- read_excel("datasets/ClusterRCT.xlsx")
+hw9b <- read_excel("datasets/ClusterRCT2.xlsx")
 
 
 
@@ -79,10 +80,12 @@ hist(classdata$coffee, breaks=seq(0,50,by=3), col="red", xlab="Coffee")
 todor::todor_file("epi notebook.Rmd")
 todor()
 my.tt_table()
+my.logit_to_pp()
 my.ORfunction()
 my.glm_function()
 my.stan_diffs()
 my.matching()
+p = 2*pnorm(Z, lower.tail=FALSE)
 ```
 
 ## UNIT 1
@@ -110,7 +113,16 @@ my.tt_table <- function(a,b,c,d,row="") {
   print(oddsratio.wald(table, rev="both")$measure)
   return(table)
 }
-table <- my.tt_table(112,79,102,116, "(fruc)")
+```
+
+
+```{r}
+table <- my.tt_table(32,3,14,11, "(fruc)")
+
+my.logit_to_pp <- function(a) {
+  exp(a)/(1+exp(a))
+}
+my.logit_to_pp(-0.5)
 ```
 
 ##### TESTS
@@ -126,6 +138,8 @@ oddsratio.wald(table, rev="both")
 riskratio(table, rev="both") 
 # rev="both": bc fx uses input r&c that are reversed relative to orig table
 # what is your increased risk of outcome if you're case
+
+
 ```
 
 ##### ODDS RATIO
@@ -145,7 +159,7 @@ my.ORfunction = function(confidence,a,b,c,d) {
   names(output) = c("OR", "lower", "upper")
   output
 }
-my.ORfunction(95,8,32,88,1045)
+my.ORfunction(95,322,330,372,301)
 ```
 
 ## UNIT 2
@@ -529,17 +543,40 @@ summary(glm.fit)
 ##### PREDICTIVE MODELING
 
 ```{r}
+library(pROC)
 library(boot)
-data <- hw7
+library(DescTools)
+data <- lab7
+
+glm.fit = glm(Kyphosis~Age+Number+Start, family = binomial, data = data)
+summary(glm.fit)
+Cstat(glm.fit)
+step.fit = step(glm.fit, direction=c("both"))
+summary(step.fit)
+Cstat(step.fit)
+
+# overfitting
+glm.fit = glm(Kyphosis~Age+Number+Start
+              + Age*Number + Age*Start + Number*Start
+              + I(Age^2) + I(Number^2) + I(Start^2),
+              family="binomial", data=data)
+summary(glm.fit)
+step.fit = step(glm.fit, direction = c("both"))
+summary(step.fit)
+roc.curve(step.fit, data, "Kyphosis")
+
 # BOOTSTRAP SAMPLING
 set.seed(1)
 
 # method 1
-boot(data, statistic, R=100) # call function R times
 statistic = function(data, selection) {
-  glm.fit = glm(fracture~dairy, data=data[selection,], family="binomial")
+  glm.fit = glm(Kyphosis~Age+Start+Number, data=data[selection,], family="binomial")
   return(coef(glm.fit)[2])
 }
+
+# return boot strap errors for the same coefficients
+boot(data, statistic, R=100) # call function R times
+
 
 # method 2
 beta = matrix(0,ncol=1,nrow=100)    #initializing
@@ -549,7 +586,7 @@ for (i in 1:100) {
   beta[i] = coef(glm.fit)[2]
 }
 
-
+# TODO: hw 7, lab
 ```
 
 
@@ -578,8 +615,7 @@ logits[1+round(j/10)] = log(x/(1-x))
 plot(logits)
 
 
-#Comparing highly abnormal and abnormal vs normal: same code with different 
-conditions
+#Comparing highly abnormal and abnormal vs normal: same code with different conditions
 logits2 = rep(0,10)
 for (j in c(1,11,21,31,41,51,61,71,81,91)) {
   positive=negative=0
@@ -599,21 +635,42 @@ plot(logits2)
 
 ##### CORRELATED DATA
 
+###### conditional logistic regression
 ```{r}
+library(survival)
+library(gee)
 data1 <- lab9a
+
+# conditional logistic regression
+# clogit.fit = clogit(y~x1+x2+strata(varName), data=data)
+clogit.fit = clogit(improved~treated+strata(id), data=data1)
+  # clustering: strata(varName) - variable to be stratified on
+  # only applies to logistic regression
+summary(clogit.fit)
+```
+
+###### gee model
+```{r}
 data2 <- lab9b
 
-clogit.fit = clogit(y~x1+x2+strata(varName), data=data)
-  # variable to be stratified on is included as strata(varName)
-  # only applies to logistic regression
-
-gee.fit = gee(y~x1+x2+x3, id=clusterName, data=data, corstr="exchangeable", family="binomial")
+# GEE model
+# gee.fit = gee(y~x1+x2+x3, data=data, family=binomial, id=clusterName, corstr="exchangeable")
+gee.fit = gee(improved~treated, data=data1, family=binomial, id=id, corstr="exchangeable")
   # id: tells function which column defines the clusters
-  # corstr: specifies the type of correlation matrix - "independence", "fixed", "stat_M_dep", "non_stat_M_dep", "exchangeable", "AR-M", and "unstructured"
-
+  # corstr: correlation matrix - "independence", "fixed", "stat_M_dep", "non_stat_M_dep", "exchangeable", "AR-M", & "unstructured"
 summary(gee.fit)
 ```
 
+```{r}
+# hw
+data1 <- hw9a
+data2 <- hw9b
+
+cor(data2) #1 
+summary(glm(InsControl~treatment+age+female, data=data1, family=binomial)) #3,4
+summary(gee(InsControl~treatment+age+female, data=data1, family=binomial, id=id, corstr="exchangeable"))
+
+```
 
 
 ##
